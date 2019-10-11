@@ -22,13 +22,32 @@ function createAnnotations(results: jest.TestResult[]) {
         };
 
         failureMessages.forEach(message => {
-          const numbers = message.match(
-            new RegExp(`${result.testFilePath}:(\\d+):\\d+`)
+          const filePath = testFilePath.replace('/index.test.ts', '');
+
+          const res = message.match(
+            new RegExp(`${filePath}/(.*\.test\.ts):(\\d+):\\d+`)
           );
-          const start_line = numbers ? Number(numbers[1]) : location.line || 0;
+          if (!res) {
+            annotations.push({
+              path: path.relative(
+                path.resolve(process.cwd(), '../..'),
+                testFilePath
+              ),
+              start_line: 0,
+              end_line: 0,
+              annotation_level: 'failure',
+              message: failureMessages.map(stripAnsi).join('\n')
+            });
+            return;
+          }
+          const [_, file, line] = res;
+          const start_line = line ? Number(line) : 0;
 
           annotations.push({
-            path: path.relative(process.cwd(), testFilePath),
+            path: path.relative(
+              path.resolve(process.cwd(), '../..'),
+              file ? `${filePath}/${file}` : testFilePath
+            ),
             start_line,
             end_line: start_line,
             annotation_level: 'failure',
@@ -46,12 +65,15 @@ export default (results: ReturnType<jest.TestResultsProcessor>) => {
   if (!process.env.JEST_APP_ID || !process.env.JEST_PRIVATE_KEY) {
     return [];
   }
+
   return createCheck({
     tool: 'Jest',
     name: 'Test',
     annotations: createAnnotations(results.testResults),
     errorCount: results.numFailedTests,
     appId: Number(process.env.JEST_APP_ID),
-    privateKey: process.env.JEST_PRIVATE_KEY
+    privateKey: Buffer.from(process.env.JEST_PRIVATE_KEY, 'base64').toString(
+      'utf8'
+    )
   });
 };
