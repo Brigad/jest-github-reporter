@@ -68,7 +68,7 @@ export default (results: ReturnType<jest.TestResultsProcessor>) => {
 
   return createCheck({
     tool: 'Jest',
-    name: 'Tests of service-' + process.env.PACKAGE,
+    name: process.env.PACKAGE ? 'Tests of ' + process.env.PACKAGE : 'Tests',
     annotations: createAnnotations(results.testResults),
     errorCount: results.numFailedTests,
     appId: Number(process.env.JEST_APP_ID),
